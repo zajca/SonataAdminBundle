@@ -906,4 +906,44 @@ class CRUDController extends Controller
 
         return $this->container->get('form.csrf_provider')->generateCsrfToken($intention);
     }
+
+    /**
+     * @param null $id
+     *
+     * @return Response
+     */
+    public function duplicateAction($id = null)
+    {
+        $templateKey = 'create';
+
+        $id = $this->get('request')->get($this->admin->getIdParameter());
+        $object = $this->admin->getObject($id);
+
+        if (!$object) {
+            throw new NotFoundHttpException(sprintf('unable to find the object with id : %s', $id));
+        }
+
+        if (false === $this->admin->isGranted('CREATE', $object)) {
+            throw new AccessDeniedException();
+        }
+
+        $object = $this->admin->duplicate($object);
+
+        $this->admin->setSubject($object);
+
+        /** @var $form \Symfony\Component\Form\Form */
+        $form = $this->admin->getForm();
+        $form->setData($object);
+
+        $view = $form->createView();
+
+        // set the theme for the current Admin Form
+        $this->get('twig')->getExtension('form')->renderer->setTheme($view, $this->admin->getFormTheme());
+
+        return $this->render($this->admin->getTemplate($templateKey), array(
+            'action' => 'create',
+            'form'   => $view,
+            'object' => $object,
+        ));
+    }
 }
