@@ -11,8 +11,6 @@
 
 namespace Sonata\AdminBundle\Tests\Form\Widget;
 
-use Symfony\Component\HttpKernel\Kernel;
-
 class FormChoiceWidgetTest extends BaseWidgetTest
 {
     protected $type = 'form';
@@ -20,6 +18,30 @@ class FormChoiceWidgetTest extends BaseWidgetTest
     public function setUp()
     {
         parent::setUp();
+    }
+
+    public function testLabelRendering()
+    {
+        $choices = array('some', 'choices');
+        if (!method_exists('Symfony\Component\Form\FormTypeInterface', 'setDefaultOptions')) {
+            $choices = array_flip($choices);
+        }
+
+        $choice = $this->factory->create(
+            $this->getChoiceClass(),
+            null,
+            $this->getDefaultOption() + array(
+                'multiple' => true,
+                'expanded' => true,
+            ) + compact('choices')
+        );
+
+        $html = $this->renderWidget($choice->createView());
+
+        $this->assertContains(
+            '<li><div class="checkbox"><label><input type="checkbox" id="choice_0" name="choice[]" value="0" /><span class="control-label__text">[trans]some[/trans]</span></label></div></li>',
+            $this->cleanHtmlWhitespace($html)
+        );
     }
 
     public function testDefaultValueRendering()
@@ -77,11 +99,10 @@ class FormChoiceWidgetTest extends BaseWidgetTest
 
     protected function getChoiceClass()
     {
-        if (version_compare(Kernel::VERSION, '2.8.0', '>=')) {
-            return 'Symfony\Component\Form\Extension\Core\Type\ChoiceType';
-        } else {
-            return 'choice';
-        }
+        return
+            method_exists('Symfony\Component\Form\AbstractType', 'getBlockPrefix') ?
+            'Symfony\Component\Form\Extension\Core\Type\ChoiceType' :
+            'choice';
     }
 
     /**
@@ -90,7 +111,10 @@ class FormChoiceWidgetTest extends BaseWidgetTest
      */
     protected function getDefaultOption()
     {
-        if (version_compare(Kernel::VERSION, '2.6.0', '>=')) {
+        if (method_exists(
+            'Symfony\Component\Form\Tests\AbstractLayoutTest',
+            'testSingleChoiceNonRequiredWithPlaceholder'
+        )) {
             return array(
                 'placeholder' => 'Choose an option',
             );
